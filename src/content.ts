@@ -195,9 +195,6 @@ export class RikaiContent {
   _selectedText: string | null = null;
   _selectedTextBox: {
     node: HTMLInputElement | HTMLTextAreaElement;
-    previousStart: number | null;
-    previousEnd: number | null;
-    previousDirection: string | null;
     previousFocus?: Element;
   } | null = null;
 
@@ -998,14 +995,13 @@ export class RikaiContent {
       const start = textAtPoint.rangeStart.offset;
       const end = start + matchLen;
 
-      // If we were previously interacting with a different text box, restore
-      // its range.
+      // If we were previously interacting with a different text box, collapse
+      // its selection.
       if (this._selectedTextBox && node !== this._selectedTextBox.node) {
-        this._restoreTextBoxSelection();
+        this._collapseTextBoxSelection();
       }
 
-      // If we were not already interacting with this text box, store its
-      // existing range and focus it.
+      // If we were not already interacting with this text box, focus it.
       if (!this._selectedTextBox || node !== this._selectedTextBox.node) {
         // Transfer the previous focus, if we have one, otherwise use the
         // currently focused element in the document.
@@ -1015,28 +1011,15 @@ export class RikaiContent {
         node.focus();
         this._selectedTextBox = {
           node,
-          previousStart: node.selectionStart,
-          previousEnd: node.selectionEnd,
-          previousDirection: node.selectionDirection,
           previousFocus,
         };
       }
 
-      // Store the current scroll range so we can restore it.
-      const { scrollTop, scrollLeft } = node;
-
-      // Clear any other selection happenning in the page.
+      // Clear any other selection happening in the page.
       selection.removeAllRanges();
 
       node.setSelectionRange(start, end);
       this._selectedText = node.value.substring(start, end);
-
-      // Restore the scroll range. We need to do this on the next tick or else
-      // something else (not sure what) will clobber it.
-      requestAnimationFrame(() => {
-        node.scrollLeft = scrollLeft;
-        node.scrollTop = scrollTop;
-      });
     } else {
       // If we were previously interacting with a text box, restore its range
       // and blur it.
@@ -1089,6 +1072,7 @@ export class RikaiContent {
         selection.removeAllRanges();
       }
 
+      console.log('Clearing textbox selection from clearHighlight');
       this._clearTextBoxSelection(currentElement);
     }
 
@@ -1107,30 +1091,13 @@ export class RikaiContent {
       return;
     }
 
-    const textBox = this._selectedTextBox.node;
-
-    // Store the previous scroll position so we can restore it, if need be.
-    const { scrollTop, scrollLeft } = textBox;
-
-    this._restoreTextBoxSelection();
-
-    // If we are still interacting with the textBox, make sure to maintain its
-    // scroll position (rather than jumping back to wherever the restored
-    // selection is just because we didn't find a match).
-    if (currentElement === textBox) {
-      // As before, we need to restore this in the next tick or else it will get
-      // clobbered.
-      requestAnimationFrame(() => {
-        textBox.scrollLeft = scrollLeft;
-        textBox.scrollTop = scrollTop;
-      });
-    }
+    this._collapseTextBoxSelection();
 
     // Otherwise, if we only focussed the textbox in order to highlight text,
     // restore the previous focus.
     if (
       isFocusable(this._selectedTextBox.previousFocus) &&
-      this._selectedTextBox.previousFocus !== textBox
+      this._selectedTextBox.previousFocus !== this._selectedTextBox.node
     ) {
       // First blur the text box since some Elements' focus() method does
       // nothing.
@@ -1141,15 +1108,13 @@ export class RikaiContent {
     this._selectedTextBox = null;
   }
 
-  _restoreTextBoxSelection() {
+  _collapseTextBoxSelection() {
     if (!this._selectedTextBox) {
       return;
     }
 
     const textBox = this._selectedTextBox.node;
-    textBox.selectionStart = this._selectedTextBox.previousStart;
-    textBox.selectionEnd = this._selectedTextBox.previousEnd;
-    textBox.selectionDirection = this._selectedTextBox.previousDirection;
+    textBox.selectionEnd = textBox.selectionStart;
   }
 
   async showPopup() {
