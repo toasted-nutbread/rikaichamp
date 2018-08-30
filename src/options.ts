@@ -179,7 +179,7 @@ function configureCommands() {
   const toggleKeyTextbox = document.getElementById(
     'toggle-key'
   ) as HTMLInputElement;
-  toggleKeyTextbox.addEventListener('keydown', evt => {
+  toggleKeyTextbox.addEventListener('keydown', (evt: KeyboardEvent) => {
     let key = evt.key;
     if (evt.key.length === 1) {
       key = key.toUpperCase();
@@ -201,13 +201,19 @@ function configureCommands() {
     updateToggleKey();
   });
 
-  toggleKeyTextbox.addEventListener('compositionstart', evt => {
-    toggleKeyTextbox.value = '';
-  });
-  toggleKeyTextbox.addEventListener('compositionend', evt => {
-    toggleKeyTextbox.value = toggleKeyTextbox.value.toUpperCase();
-    updateToggleKey();
-  });
+  toggleKeyTextbox.addEventListener(
+    'compositionstart',
+    (evt: CompositionEvent) => {
+      toggleKeyTextbox.value = '';
+    }
+  );
+  toggleKeyTextbox.addEventListener(
+    'compositionend',
+    (evt: CompositionEvent) => {
+      toggleKeyTextbox.value = toggleKeyTextbox.value.toUpperCase();
+      updateToggleKey();
+    }
+  );
 }
 
 type WarningState = 'ok' | 'warning' | 'error';
