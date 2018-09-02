@@ -25,6 +25,7 @@ async function load(url: string) {
       self.postMessage(messages.loadProgress(null, total));
 
       const text = await response.text();
+      self.postMessage(messages.loadComplete());
     } else {
       // Let the caller know the total response size.
       self.postMessage(messages.loadProgress(0, total));
@@ -43,6 +44,7 @@ function consume(reader: ReadableStreamReader, total: number | null) {
   async function pump(): Promise<void> {
     const { done, value } = await reader.read();
     if (done) {
+      self.postMessage(messages.loadComplete());
       return;
     }
 
