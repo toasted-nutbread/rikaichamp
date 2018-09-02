@@ -1,6 +1,6 @@
 /*
 
-  Rikai champ
+  Rikaichamp
   by Brian Birtles
   https://github.com/birtles/rikaichamp
 

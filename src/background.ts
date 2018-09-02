@@ -52,6 +52,7 @@ import bugsnag from 'bugsnag-js';
 
 import Config from './config';
 import Dictionary from './data';
+import JMDict from './JMDict';
 
 declare global {
   interface Window {
@@ -76,6 +77,7 @@ browser.management.getSelf().then(info => {
 class App {
   _config: Config;
   _dict?: Dictionary;
+  _jmdict?: JMDict;
 
   _dictCount: number = 3;
   _enabled: boolean = false;
@@ -154,6 +156,7 @@ class App {
               bugsnagClient.leaveBreadcrumb('No sender tab in enable? request');
             }
             break;
+
           case 'xsearch':
             if (
               typeof request.text === 'string' &&
@@ -272,6 +275,19 @@ class App {
     }
 
     bugsnagClient.leaveBreadcrumb('Loaded dictionary successfully');
+
+    if (!this._jmdict) {
+      this._jmdict = new JMDict({ bugsnag: bugsnagClient });
+    }
+
+    try {
+      await this._jmdict.loaded;
+    } catch (e) {
+      this._jmdict = undefined;
+      throw e;
+    }
+
+    bugsnagClient.leaveBreadcrumb('Loaded word dictionary successfully');
   }
 
   onTabSelect(tabId: number) {

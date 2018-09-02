@@ -29,15 +29,15 @@ async function load(url: string) {
       // Let the caller know the total response size.
       self.postMessage(messages.loadProgress(0, total));
 
-      consume(response.body.getReader());
+      consume(response.body.getReader(), total);
     }
   } catch (e) {
-    self.postMessage(messages.loadError(e));
+    self.postMessage(messages.loadError(e, url));
   }
 }
 
-function consume(reader: ReadableStreamReader) {
-  let total: number = 0;
+function consume(reader: ReadableStreamReader, total: number | null) {
+  let read: number = 0;
   return pump();
 
   async function pump(): Promise<void> {
@@ -46,7 +46,11 @@ function consume(reader: ReadableStreamReader) {
       return;
     }
 
-    total += value.byteLength;
+    read += value.byteLength;
+    if (total !== null) {
+      const progress = read / total;
+      self.postMessage(messages.loadProgress(progress, total));
+    }
     return pump();
   }
 }
