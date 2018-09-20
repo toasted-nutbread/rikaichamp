@@ -1,5 +1,11 @@
 import { Bugsnag } from 'bugsnag-js';
 import { DB } from 'idb';
+import * as mitt from 'mitt';
+// ^ This should become:
+//
+//   import mitt from 'mitt';
+//
+// Once the mitt package is updated.
 
 import * as messages from './messages';
 
@@ -15,13 +21,21 @@ interface DictionaryOptions {
 }
 
 export class JMDict {
-  bugsnag?: Bugsnag.Client;
-  database?: DB;
+  private bugsnag?: Bugsnag.Client;
+  private database?: DB;
+  private emitter: mitt.Emitter;
+
   loaded: Promise<void>;
 
   constructor(options: DictionaryOptions) {
     this.bugsnag = options.bugsnag;
     this.loaded = this.loadDictionary();
+    // We should drop 'new' once the mitt package is updated.
+    this.emitter = new mitt();
+  }
+
+  get status(): mitt.Emitter {
+    return this.emitter;
   }
 
   async loadDictionary(): Promise<void> {
@@ -65,12 +79,16 @@ export class JMDict {
     return new Promise<void>((resolve, reject) => {
       worker.onmessage = (evt: MessageEvent) => {
         if (messages.isLoadStartedMessage(evt)) {
-          // XXX Call an onProgress callback
+          this.emitter.emit('progress', { url, bytes: 0, total: null });
           return;
         }
 
         if (messages.isLoadProgressMessage(evt)) {
-          // XXX Call an onProgress callback
+          this.emitter.emit('progress', {
+            url,
+            bytes: evt.bytes,
+            total: evt.total,
+          });
           return;
         }
 
@@ -86,12 +104,22 @@ export class JMDict {
         }
 
         if (messages.isLoadWarningMessage(evt)) {
-          // XXX Notify bugsnag
+          if (this.bugsnag) {
+            this.bugsnag.notify(
+              new Error(`Warning loading JMDict ${evt.message}`),
+              { metaData: evt, severity: 'warning' }
+            );
+          }
           return;
         }
 
         if (messages.isLoadErrorMessage(evt)) {
-          // XXX Notify bugsnag
+          if (this.bugsnag) {
+            this.bugsnag.notify(
+              new Error(`Error loading JMDict ${evt.message}`),
+              { metaData: evt, severity: 'error' }
+            );
+          }
           worker.terminate();
           reject(evt.message);
           return;
@@ -100,9 +128,8 @@ export class JMDict {
 
       worker.onmessageerror = (evt: MessageEvent) => {
         if (this.bugsnag) {
-          // XXX Get this to fail and see what useful information we can extract
-          // from |evt|.
           this.bugsnag.notify('Worker message could not be deserialized', {
+            metaData: evt,
             severity: 'error',
           });
         }
@@ -117,7 +144,7 @@ export class JMDict {
     });
   }
 
-  destroy() {
+  close() {
     if (this.database) {
       this.database.close();
       delete this.database;
