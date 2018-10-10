@@ -5,6 +5,8 @@
 // eventually store the records as actually JS(ON) objects) but there will still
 // probably be some pre-processing on the content side to coalesce records etc.
 
+import moize from 'moize';
+
 export interface WordEntry {
   kanjiKana: string;
   kana: string[];
@@ -36,12 +38,35 @@ const isKanjiEntry = (result: SearchResult): result is KanjiEntry =>
 const isNamesEntry = (result: SearchResult): result is WordSearchResult =>
   (result as WordSearchResult).names !== undefined;
 
-// XXX Add a wrapper for this that memoizes when dictMode is Default
+const memoizedDoQuery = moize(doQuery, {
+  maxSize: 7,
+  isPromise: true,
+  isDeepEqual: true,
+});
 
 export async function query(
   text: string,
   options: QueryOptions
 ): Promise<QueryResult | null> {
+  console.log('query');
+  // We can't memoize doQuery in general because the different dictionary modes
+  // have side effects or are dependent on state (the dictionary mode).
+  //
+  // However, we should be able to memoize the Default mode (although
+  // technically it changes state, it should still produce the same result each
+  // time).
+  if (options.dictMode === DictMode.Default) {
+    return memoizedDoQuery(text, options);
+  } else {
+    return doQuery(text, options);
+  }
+}
+
+async function doQuery(
+  text: string,
+  options: QueryOptions
+): Promise<QueryResult | null> {
+  console.log('doQuery');
   let message;
   if (options.wordLookup) {
     message = {
