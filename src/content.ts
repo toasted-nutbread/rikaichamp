@@ -241,10 +241,12 @@ export class RikaiContent {
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseDown = this.onMouseDown.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
+    this.onInput = this.onInput.bind(this);
     this.onFocusIn = this.onFocusIn.bind(this);
     window.addEventListener('mousemove', this.onMouseMove);
     window.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('keydown', this.onKeyDown, { capture: true });
+    window.addEventListener('input', this.onInput);
     window.addEventListener('focusin', this.onFocusIn);
 
     this.testTimerPrecision();
@@ -274,6 +276,7 @@ export class RikaiContent {
     window.removeEventListener('mousemove', this.onMouseMove);
     window.removeEventListener('mousedown', this.onMouseDown);
     window.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('input', this.onInput);
     window.removeEventListener('focusin', this.onFocusIn);
 
     this.clearHighlight(null);
@@ -462,13 +465,48 @@ export class RikaiContent {
 
       ev.stopPropagation();
       ev.preventDefault();
-    } else if (textBoxInFocus) {
+    } else if (
+      textBoxInFocus &&
+      ev.key !== 'Unidentified' &&
+      ev.key !== 'Process'
+    ) {
       // If we are focussed on a textbox and the keystroke wasn't a rikaichamp
       // one, enter typing mode and hide the pop-up.
       if (textBoxInFocus) {
         this.clearHighlight(this._currentTarget);
         this._typingMode = true;
       }
+    }
+  }
+
+  onInput(ev: InputEvent) {
+    // Older versions of Firefox don't support data or inputType
+    if (!ev.data || !ev.inputType) {
+      return;
+    }
+
+    // We only need this code path for text entered in during composition.
+    if (ev.inputType !== 'insertCompositionText') {
+      return;
+    }
+
+    // We only care about full-width ASCII
+    const charCode = ev.data.charCodeAt(ev.data.length - 1);
+    if ((charCode < 0xff00 || charCode > 0xff5f) && charCode !== 0x3000) {
+      return;
+    }
+
+    // Convert to halfWidth
+    const halfWidthCharCode =
+      charCode === 0x3000 ? 0x0020 : 0x0020 + (charCode - 0xff00);
+    const key = String.fromCharCode(halfWidthCharCode);
+
+    // As with onKeyDown, if rikaichamp handled the key, break out of typing
+    // mode can cancel any other processing of the event.
+    if (this.handleKey(key, false)) {
+      this._typingMode = false;
+      ev.stopPropagation();
+      ev.preventDefault();
     }
   }
 

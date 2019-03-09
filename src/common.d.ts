@@ -94,3 +94,12 @@ interface TranslateResult {
 }
 
 type SearchResult = KanjiEntry | WordSearchResult | TranslateResult;
+
+// Missing DOM definitions
+
+interface InputEvent extends UIEvent {}
+declare class InputEvent {
+  readonly isComposing: boolean;
+  readonly inputType: string;
+  readonly data: string;
+}
