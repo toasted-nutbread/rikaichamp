@@ -120,6 +120,29 @@ const chromeConfig = {
   ],
 };
 
+const thunderbirdConfig = {
+  ...commonExtConfig,
+  module: {
+    ...commonExtConfig.module,
+    rules: extendArray(
+      commonExtConfig.module.rules,
+      getPreprocessorConfig(
+        'use_menus_api',
+        'supports_svg_icons',
+        'supports_browser_style',
+        'supports_applications_field'
+      )
+    ),
+  },
+  output: {
+    path: path.resolve(__dirname, 'dist-thunderbird'),
+    filename: '[name].js',
+  },
+  plugins: [
+    new CopyWebpackPlugin(['css/*', 'images/*', 'data/*', '_locales/**/*']),
+  ],
+};
+
 const testConfig = {
   ...commonConfig,
   name: 'tests',
@@ -136,6 +159,8 @@ module.exports = (env, argv) => {
   let configs = [testConfig];
   if (env && env.target === 'chrome') {
     configs.push({ ...chromeConfig, name: 'extension' });
+  } else if (env && env.target === 'thunderbird') {
+    configs.push({ ...thunderbirdConfig, name: 'extension' });
   } else {
     configs.push({ ...firefoxConfig, name: 'extension' });
   }

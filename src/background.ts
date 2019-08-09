@@ -258,7 +258,19 @@ class App {
       this.onTabSelect(activeInfo.tabId);
     });
     browser.browserAction.onClicked.addListener(tab => {
-      this.toggle(tab);
+      if (tab) {
+        this.toggle(tab);
+      } else {
+        // This is just temporary code now to see what we can do. If we stick
+        // with this we'll want to add proper TS typings for this.
+        (browser as any).mailTabs
+          .query({ currentWindow: true })
+          .then((tabs: any) => {
+            if (Array.isArray(tabs) && tabs.length) {
+              this.toggle(tabs[0]);
+            }
+          });
+      }
     });
     browser.runtime.onMessage.addListener(
       (

@@ -27,7 +27,11 @@
     "128": "images/rikaichamp-blue-128.png"
   },
   /*#endif*/
+  /*#if use_menus_api */
+  "permissions": ["clipboardWrite", "menus", "tabs", "storage"],
+  /*#else*/
   "permissions": ["clipboardWrite", "contextMenus", "tabs", "storage"],
+  /*#endif */
   "background": {
     "page": "background.html"
   },
@@ -64,6 +68,9 @@
     }
   ],
   "web_accessible_resources": [
+    "rikaichamp-background.js.map",
+    "rikaichamp-content.js.map",
+    "rikaichamp-options.js.map",
     "css/popup.css",
     "images/warning-red.svg",
     "images/warning-yellow.svg"
